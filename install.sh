@@ -221,6 +221,7 @@ main() {
 
     say "==> Installing useful applications"
     install_discord
+    install_package_if_needed_yay "spotify" "spotify"
 
     say "Setup complete!"
 }
