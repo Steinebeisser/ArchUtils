@@ -84,6 +84,21 @@ install_package_if_needed() {
     say ""
 }
 
+install_package_if_needed_confirm() {
+    local package_name=$1
+    local command_name=$2
+    say "Checking if $package_name is installed..."
+
+    if ! check_command "$command_name"; then
+        say "    $package_name not found. Installing..."
+        sudo pacman -S "$package_name" || { yell "Failed to install $package_name"; exit 1; }
+    else
+        say "    $package_name is already installed."
+    fi
+    say ""
+}
+
+
 install_package_if_needed_yay() {
     if ! check_command "yay" "yay"; then
         install_yay
@@ -151,7 +166,7 @@ create_alias() {
 }
 
 reload_shell_config() {
-    echo "Run 'source ~/.bashrc' to apply alias changes"
+    echo "Run 'source ~/.zshrc' to apply alias changes"
 }
 
 install_discord() {
@@ -168,6 +183,72 @@ install_discord() {
     fi
 }
 
+install_evolution() {
+    install_package_if_needed "evolution" "evolution"
+
+    say "Installing evolution-ews"
+    if pacman -Qq | grep -q "^evolution-ews$"; then
+        say "    evolution-ews is already installed."
+    else
+        say "    Installing evolution-ews..."
+        sudo pacman -S --noconfirm "evolution-ews" || { yell "Failed to install evolution-ews"; exit 1; }
+    fi
+    say ""
+}
+
+install_font() {
+    local name=$1
+    local grep_pattern=$2
+
+    say "Installing \"$name\" Font"
+    if ! pacman -Qs "$grep_pattern" > /dev/null; then
+        sudo pacman -S --noconfirm "$name"
+        fc-cache -f -v
+    else
+        say "$name is already installed."
+    fi
+    say ""
+
+}
+
+install_zsh() {
+    install_package_if_needed "zsh" "zsh"
+
+    say "Setting Zsh as default shell"
+    if [ "$SHELL" != "$(which zsh)" ]; then
+        chsh -s "$(which zsh)"
+        say "    Default shell changed to Zsh. Please log out and log back in for the changes to take effect."
+    else
+        say "    Zsh is already set as the default shell."
+    fi
+    say ""
+}
+
+enable_multilib_if_needed() {
+    say "Checking if multilib is enabled"
+    if ! grep -q "^\[multilib\]" /etc/pacman.conf; then
+        say "    Enabling multilib repository"
+
+        sudo sed -i '/^[[:space:]]*# \[multilib\]/,/^[[:space:]]*# Include/ s/^[[:space:]]*# //' /etc/pacman.conf
+        
+        sudo pacman -Sy
+    else
+        say "    Multilib already enabled"
+    fi
+    say ""
+}
+
+install_steam() {
+    enable_multilib_if_needed
+
+    # sudo pacman -S --noconfirm \
+    #     lsb-release lsof xorg-xrandr zenity lib32-alsa-plugins || { 
+    #         yell "Failed to install Steam dependencies"
+    #         exit 1
+    #     }
+
+    install_package_if_needed "steam" "steam"
+}
 
 main() {
     update_system
@@ -182,12 +263,16 @@ main() {
     install_package_if_needed "flatpak" "flatpak"
     install_package_if_needed "vi" "vi"
 
+    install_zsh
+
     say "==> Installing enhanced terminal utilities..."
     install_package_if_needed_yay "exa" "exa"
     install_package_if_needed "fd" "fd"
     install_package_if_needed "ripgrep" "rg"
     install_package_if_needed "bat" "bat"
     install_package_if_needed "btop" "btop"
+    install_package_if_needed "yazi" "yazi"
+    install_package_if_needed "less" "less"
 
     say "==> Installing aesthetic and fun terminal tools..."
     install_package_if_needed_yay "neofetch" "neofetch"
@@ -203,6 +288,11 @@ main() {
     install_package_if_needed "cmatrix" "cmatrix"
     install_package_if_needed "sl" "sl"
 
+    say "==> Installing assets"
+    install_font "ttf-jetbrains-mono-nerd" "ttf-jetbrains-mono-nerd"
+    install_font "noto-fonts-cjk" "noto-fonts-cjk"
+
+
     say "==> Creating useful command aliases..."
 
     create_alias "ls" "exa --icons --group-directories-first"
@@ -217,11 +307,12 @@ main() {
     say "==> Setting up dotfiles..."
     clone_dotfiles
     install_dotfiles
-    install_nvim_configuration
 
     say "==> Installing useful applications"
     install_discord
     install_package_if_needed_yay "spotify" "spotify"
+    install_evolution
+    install_steam
 
     say "Setup complete!"
 }
