@@ -28,7 +28,7 @@ say() {
 }
 
 yell() {
-    echo "ERROR: [ $@ ]"
+    echo "ERROR: [ $@ ]" >&2
 }
 
 whisper() {
@@ -155,13 +155,13 @@ create_alias() {
         if [ "$OVERRIDE_ALIAS" -eq 1 ]; then
             sed -i "/alias $name=/d" "$shellrc"
             echo "alias $name='$target'" >> "$shellrc"
-            say "Overwrote alias: $name → $target"
+            say "Overwrote alias: $name → $target in $shellrc"
         else
             whisper "Alias for $name exists, use --override-alias to replace"
         fi
     else
         echo "alias $name='$target'" >> "$shellrc"
-        say "Added alias: $name → $target"
+        say "Added alias: $name → $target to $shellrc"
     fi
 }
 
@@ -250,71 +250,103 @@ install_steam() {
     install_package_if_needed "steam" "steam"
 }
 
+install_minecraft_grub_theme() {
+    say "Installing Minecraft Grub Theme"
+    if [ ! -d /boot/grub/themes/minegrub ]; then
+        say "    Cloning repo"
+        git clone https://github.com/Lxtharia/minegrub-theme.git
+        cd ./minegrub-theme
+        sudo mv -ruv ./minegrub /boot/grub/themes/
+
+        say "    Adding backup file"
+        sudo cp /etc/default/grub /etc/default/grub.bak
+
+        say "    Adding theme to file"
+        sudo sed -i -r '
+            s|^#?GRUB_THEME=.*|GRUB_THEME=/boot/grub/themes/minegrub/theme.txt|
+        ' /etc/default/grub
+
+        sudo grub-mkconfig -o /boot/grub/grub.cfg
+    else
+        say "    Already Installed"
+    fi
+    say ""
+}
+
 main() {
     update_system
 
     say "==> Installing core CLI tools..."
-    install_package_if_needed "git" "git"
-    install_package_if_needed "neovim" "nvim"
-    install_package_if_needed "unzip" "unzip"
-    install_package_if_needed "jq" "jq"
-    install_package_if_needed "fzf" "fzf"
-    install_package_if_needed "tmux" "tmux"
-    install_package_if_needed "flatpak" "flatpak"
-    install_package_if_needed "vi" "vi"
+    install_package_if_needed "git" "git" # source control | Command: git
+    install_package_if_needed "neovim" "nvim" # my text editor | Command: nvim
+    install_package_if_needed "unzip" "unzip" # extract zip archives | Command: unzip
+    install_package_if_needed "jq" "jq" # JSON processor, kinda uselss | Command: jq
+    install_package_if_needed "fzf" "fzf" # fuzzy finder | Command: fzf
+    install_package_if_needed "tmux" "tmux" # terminal multiplexer, sessions | Command: tmux
+    install_package_if_needed "flatpak" "flatpak" # app installer (used for discord) | Command: flatpak
+    install_package_if_needed "vi" "vi" # vi text editor, default for git | Command: vi
 
-    install_zsh
+    install_zsh # installs Zsh and sets it as default | Command: zsh 
 
     say "==> Installing enhanced terminal utilities..."
-    install_package_if_needed_yay "exa" "exa"
-    install_package_if_needed "fd" "fd"
-    install_package_if_needed "ripgrep" "rg"
-    install_package_if_needed "bat" "bat"
-    install_package_if_needed "btop" "btop"
-    install_package_if_needed "yazi" "yazi"
-    install_package_if_needed "less" "less"
+    install_package_if_needed_yay "exa" "exa" # modern ls with icons | aliased as: ls
+    install_package_if_needed "fd" "fd" # better find | Command: fd
+    install_package_if_needed "ripgrep" "rg" # better grep | aliased as: grep
+    install_package_if_needed "bat" "bat" # better cat | aliased as: cat
+    install_package_if_needed "btop" "btop" # better htop, which is better top | Command: btop
+    install_package_if_needed "yazi" "yazi" # file explorer in terminal, supports images | Command: yazi
+    install_package_if_needed "less" "less" # used for git diff | Command: less
+    install_package_if_needed "mpv" "mpv" # media player for terminal | Command: mpv 
+    install_package_if_needed "yt-dlp" "yt-dlp" # used to download videos (yt, twitch, soundcloud) | Command: yt-dlp
+
 
     say "==> Installing aesthetic and fun terminal tools..."
-    install_package_if_needed_yay "neofetch" "neofetch"
-    install_package_if_needed_yay "lolcat" "lolcat"
-    install_package_if_needed_yay "pipes.sh" "pipes.sh"
-    install_package_if_needed_yay "asciiquarium" "asciiquarium"
-    install_package_if_needed_yay "ponysay" "ponysay"
-    install_package_if_needed_yay "cbonsai" "cbonsai"
-    install_package_if_needed "figlet" "figlet"
-    install_package_if_needed "cowsay" "cowsay"
-    install_package_if_needed "fortune-mod" "fortune"
-    install_package_if_needed "toilet" "toilet"
-    install_package_if_needed "cmatrix" "cmatrix"
-    install_package_if_needed "sl" "sl"
+    install_package_if_needed_yay "neofetch" "neofetch" # to flex that i use arch | Command: neofetch
+    install_package_if_needed_yay "lolcat" "lolcat" # to make rainbow text | echo "test" | lolcat
+    install_package_if_needed_yay "pipes.sh" "pipes.sh" # fancy animated pipes | Command: pipes.sh
+    install_package_if_needed_yay "asciiquarium" "asciiquarium" # fancy anommated aquarium | Command: asciiquarium
+    install_package_if_needed_yay "ponysay" "ponysay" # cowsay but with ponys | Command: ponysay
+    install_package_if_needed_yay "cbonsai" "cbonsai" # let bonsai grow | Command: cbonsai -li 
+    install_package_if_needed "figlet" "figlet" # fancy text banner | Command: figlet Hello
+    install_package_if_needed "cowsay" "cowsay" # cowsay | Comand: cowsay Hello
+    install_package_if_needed "fortune-mod" "fortune" # random text | Comand: fortune
+    install_package_if_needed "toilet" "toilet" # fancy text banner | Command: toilet
+    install_package_if_needed "cmatrix" "cmatrix" # fancy matrix | Command: matrix
+    install_package_if_needed "sl" "sl" # train if missspell ls | Command: sl
 
     say "==> Installing assets"
-    install_font "ttf-jetbrains-mono-nerd" "ttf-jetbrains-mono-nerd"
-    install_font "noto-fonts-cjk" "noto-fonts-cjk"
+    install_font "ttf-jetbrains-mono-nerd" "ttf-jetbrains-mono-nerd" # fancy font
+    install_font "noto-fonts-cjk" "noto-fonts-cjk" # chinese, japanese, korean font
+
+    install_minecraft_grub_theme # minecraft grub theme
 
 
-    say "==> Creating useful command aliases..."
+    # Comment this as the aliases get added through dotfiles, still keep cause why not
+    # say "==> Creating useful command aliases..."
 
-    create_alias "ls" "exa --icons --group-directories-first"
-    create_alias "ll" "exa -lh"
-    create_alias "la" "exa -la"
-    create_alias "grep" "rg"
-    create_alias "cat" "bat"
-    create_alias "top" "btop"
+    # create_alias "ls" "exa --icons --group-directories-first" 
+    # create_alias "ll" "exa -lh"
+    # create_alias "la" "exa -la"
+    # create_alias "grep" "rg"
+    # create_alias "cat" "bat"
+    # create_alias "top" "btop"
+    # create_alias ".." "cd .."
+    # create_alias "..." "cd ../.."
 
-    reload_shell_config
 
     say "==> Setting up dotfiles..."
-    clone_dotfiles
-    install_dotfiles
+    clone_dotfiles # clones my dotfiles
+    install_dotfiles # installs all my dotfiles (nvim, zshrc, kitty...), symlinks and installs needed dependencies
 
     say "==> Installing useful applications"
-    install_discord
-    install_package_if_needed_yay "spotify" "spotify"
-    install_evolution
-    install_steam
+    install_discord #discord over flatpak
+    install_package_if_needed_yay "spotify" "spotify" # spotify
+    install_evolution # email client
+    install_steam # installs steam and enables multilib
 
     say "Setup complete!"
+
+    reload_shell_config # notify user to reload shell config
 }
 
 main
