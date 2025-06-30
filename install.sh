@@ -64,6 +64,8 @@ install_yay() {
         run git clone https://aur.archlinux.org/yay.git
         cd yay || { yell "Failed to change directory to yay"; exit 1; }
         makepkg -si --noconfirm || { yell "Failed to make yay package"; exit 1; }
+        cd ..
+        run sudo rm -rf yay
     else
         say "    yay is already installed."
     fi
@@ -229,7 +231,7 @@ enable_multilib_if_needed() {
     if ! grep -q "^\[multilib\]" /etc/pacman.conf; then
         say "    Enabling multilib repository"
 
-        sudo sed -i '/^[[:space:]]*# \[multilib\]/,/^[[:space:]]*# Include/ s/^[[:space:]]*# //' /etc/pacman.conf
+        sudo sed -i '/^#\s*\[multilib\]/,/^#\s*Include/ s/^#\s*//' /etc/pacman.conf
         
         sudo pacman -Sy
     else
@@ -256,7 +258,10 @@ install_minecraft_grub_theme() {
         say "    Cloning repo"
         git clone https://github.com/Lxtharia/minegrub-theme.git
         cd ./minegrub-theme
-        sudo mv -ruv ./minegrub /boot/grub/themes/
+        sudo cp -ruv ./minegrub /boot/grub/themes/
+        
+        cd ..
+        sudo rm -rf minegrub-theme
 
         say "    Adding backup file"
         sudo cp /etc/default/grub /etc/default/grub.bak
@@ -271,6 +276,19 @@ install_minecraft_grub_theme() {
         say "    Already Installed"
     fi
     say ""
+}
+
+
+install_starship_rs() {
+    install_package_if_needed "starship" "starship"
+
+    say "Setting up catppuccin-powerline"
+    if [ ! -f ~/.config/starship.toml ]; then
+        say "    Added Catppuccin preset"
+        starship preset catppuccin-powerline -o ~/.config/starship.toml
+    else
+        say "    Already installed"
+    fi
 }
 
 main() {
@@ -313,6 +331,8 @@ main() {
     install_package_if_needed "toilet" "toilet" # fancy text banner | Command: toilet
     install_package_if_needed "cmatrix" "cmatrix" # fancy matrix | Command: matrix
     install_package_if_needed "sl" "sl" # train if missspell ls | Command: sl
+    install_starship_rs
+    install_package_if_needed "starship" "starship"
 
     say "==> Installing assets"
     install_font "ttf-jetbrains-mono-nerd" "ttf-jetbrains-mono-nerd" # fancy font
